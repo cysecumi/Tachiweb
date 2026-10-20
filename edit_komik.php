@@ -44,20 +44,15 @@ if(!$data) {
 
                 <div class="form-group">
                     <label>Judul Komik</label>
-                    <input type="text" name="judul" value="<?php echo $data['judul']; ?>" required>
+                    <input type="text" name="judul" value="<?php echo htmlspecialchars($data['judul']); ?>" required>
                 </div>
                 <div class="form-group">
                     <label>Author / Penulis</label>
-                    <input type="text" name="author" value="<?php echo $data['author']; ?>" required>
+                    <input type="text" name="author" value="<?php echo htmlspecialchars($data['author']); ?>" required>
                 </div>
                 <div class="form-group">
                     <label>Sumber Aggregator</label>
-                    <select name="sumber">
-                        <option value="Asura" <?php if($data['sumber'] == 'Asura') echo 'selected'; ?>>Asura</option>
-                        <option value="KomikCast" <?php if($data['sumber'] == 'KomikCast') echo 'selected'; ?>>KomikCast</option>
-                        <option value="MangaPlus" <?php if($data['sumber'] == 'MangaPlus') echo 'selected'; ?>>MangaPlus</option>
-                        <option value="SUKI" <?php if($data['sumber'] == 'SUKI') echo 'selected'; ?>>SUKI</option>
-                    </select>
+                    <input type="text" name="sumber" value="<?php echo htmlspecialchars($data['sumber']); ?>" required placeholder="Contoh: Asura, Kiryuu, Komikcast">
                 </div>
                 <div class="form-group">
                     <label>Status</label>
@@ -67,6 +62,18 @@ if(!$data) {
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Tipe Komik</label>
+                    <select name="tipe">
+                        <option value="Manga" <?php if(isset($data['tipe']) && $data['tipe'] == 'Manga') echo 'selected'; ?>>🇯🇵 Manga (Jepang)</option>
+                        <option value="Manhwa" <?php if(isset($data['tipe']) && $data['tipe'] == 'Manhwa') echo 'selected'; ?>>🇰🇷 Manhwa (Korea)</option>
+                        <option value="Manhua" <?php if(isset($data['tipe']) && $data['tipe'] == 'Manhua') echo 'selected'; ?>>🇨🇳 Manhua (China)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Genre (Pisahkan dengan koma)</label>
+                    <input type="text" name="genre" value="<?php echo htmlspecialchars($data['genre'] ?? ''); ?>" placeholder="Contoh: Action, Adventure, Fantasy">
+                </div>
+                <div class="form-group">
                     <label>Cover Saat Ini</label><br>
                     <img src="<?php echo $data['cover']; ?>" width="80" style="border-radius: 4px; margin-bottom: 5px;"><br>
                     <label style="font-size: 0.75rem; color: #888;">Ganti Cover (Biarkan kosong jika tidak diubah):</label>
@@ -74,7 +81,7 @@ if(!$data) {
                 </div>
                 <div class="form-group">
                     <label>Sinopsis</label>
-                    <textarea name="sinopsis" rows="5" required><?php echo $data['sinopsis']; ?></textarea>
+                    <textarea name="sinopsis" rows="5" required><?php echo htmlspecialchars($data['sinopsis']); ?></textarea>
                 </div>
 
                 <div style="display: flex; gap: 10px; margin-top: 15px;">

@@ -2,14 +2,21 @@
 session_start();
 include 'config/koneksi.php';
 
-// Validasi keamanan sesi
-if(!isset($_SESSION['status']) || ($_SESSION['status'] != "login" && $_SESSION['status'] != "guest")){
+if(!isset($_SESSION['status']) || $_SESSION['status'] != "login"){
     header("location:login.php?pesan=akses_ditolak");
     exit;
 }
 
-$id_user = isset($_SESSION['id_user']) ? $_SESSION['id_user'] : 0;
-$result_library = mysqli_query($koneksi, "SELECT * FROM library WHERE id_user='$id_user'");
+$id_user_sess = isset($_SESSION['id_user']) ? intval($_SESSION['id_user']) : (isset($_SESSION['user_id']) ? intval($_SESSION['user_id']) : 0);
+
+// Ambil data library milik user + cek riwayat bab terakhir dari riwayat_baca
+$q_lib = "SELECT l.*, r.last_chapter 
+          FROM library l 
+          LEFT JOIN riwayat_baca r ON l.id_komik = r.id_komik AND r.id_user = $id_user_sess 
+          WHERE l.id_user = $id_user_sess 
+          ORDER BY l.id_library DESC";
+$query_lib = mysqli_query($koneksi, $q_lib);
+$jumlah_lib = mysqli_num_rows($query_lib);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -21,67 +28,46 @@ $result_library = mysqli_query($koneksi, "SELECT * FROM library WHERE id_user='$
 </head>
 <body>
 
+    <!-- Header -->
     <?php include 'components/header.php'; ?>
-    
+
     <div class="container">
+        <h3 class="section-title">Library Saya</h3>
         
-        <!-- TOMBOL NAVIGASI KEMBALI KE BERANDA -->
-        <div style="margin-bottom: 15px;">
-            <a href="index.php" style="color: #bb86fc; text-decoration: none; font-size: 0.9rem; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;">
-                ← Kembali ke Beranda
-            </a>
-        </div>
-
-        <h3 class="section-title">Library / Komik Disimpan</h3>
-        
-        <!-- NOTIFIKASI SUKSES SETELAH MENGHAPUS KOMIK -->
-        <?php 
-        if(isset($_GET['pesan']) && $_GET['pesan'] == 'hapus_sukses') {
-        ?>
-            <div style="background-color: #1e1e1e; border-left: 4px solid #4caf50; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <span style="color: #4caf50; font-size: 0.9rem; font-weight: bold;">
-                    ✅ Komik berhasil dihapus dari Library Anda!
-                </span>
-                <a href="index.php" style="background: #bb86fc; color: #121212; padding: 6px 14px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">
-                    🏠 Kembali ke Beranda
-                </a>
-            </div>
-        <?php 
-        }
-        ?>
-
-        <?php if(mysqli_num_rows($result_library) > 0) { ?>
+        <?php if($jumlah_lib == 0) { ?>
+            <div class="kosong">📚 Library kamu masih kosong. Yuk cari komik favoritmu di beranda!</div>
+        <?php } else { ?>
             <div class="comic-grid">
-                <?php while($komik = mysqli_fetch_assoc($result_library)) { ?>
+                <?php 
+                while($lib = mysqli_fetch_assoc($query_lib)) { 
+                    $id_komik  = $lib['id_komik'];
+                    $ch_lanjut = !empty($lib['last_chapter']) ? $lib['last_chapter'] : 1;
+                    $teks_ch   = !empty($lib['last_chapter']) ? "📖 Lanjut Ch. " . $ch_lanjut : "📖 Mulai Ch. 1";
+                ?>
                     <div class="comic-card">
-                        <span class="comic-badge"><?php echo $komik['sumber']; ?></span>
-                        <img src="<?php echo $komik['cover']; ?>" alt="Cover <?php echo $komik['judul_komik']; ?>">
+                        <span class="comic-badge"><?php echo htmlspecialchars($lib['sumber']); ?></span>
+                        <a href="detail.php?id=<?php echo $id_komik; ?>" style="text-decoration: none; color: inherit;">
+                            <img src="<?php echo htmlspecialchars($lib['cover']); ?>" alt="Cover <?php echo htmlspecialchars($lib['judul_komik']); ?>">
+                        </a>
                         <div class="comic-info">
-                            <div class="comic-title"><?php echo $komik['judul_komik']; ?></div>
-                            
-                            <!-- FORM TOMBOL HAPUS DARI LIBRARY -->
-                            <form action="actions/hapus_library.php" method="POST" style="margin-top: 8px;">
-                                <input type="hidden" name="id_library" value="<?php echo $komik['id_library']; ?>">
-                                <button type="submit" onclick="return confirm('Apakah Anda yakin ingin menghapus komik ini dari Library?')" style="background: #cf6679; border: none; color: white; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; width: 100%; font-weight: bold;">
-                                    🗑️ Hapus dari Library
-                                </button>
-                            </form>
+                            <a href="detail.php?id=<?php echo $id_komik; ?>" style="text-decoration: none; color: inherit;">
+                                <div class="comic-title"><?php echo htmlspecialchars($lib['judul_komik']); ?></div>
+                            </a>
+                            <div class="comic-meta" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+                                <a href="baca.php?id=<?php echo $id_komik; ?>&ch=<?php echo $ch_lanjut; ?>" 
+                                   style="display: block; text-align: center; background: #bb86fc; color: #121212; text-decoration: none; padding: 6px 10px; font-size: 0.8rem; font-weight: bold; border-radius: 4px;">
+                                   <?php echo $teks_ch; ?>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 <?php } ?>
             </div>
-        <?php } else { ?>
-            <!-- TAMPILAN JIKA RAK BUKU KOSONG -->
-            <div style="text-align: center; padding: 50px 20px; background: #1e1e1e; border-radius: 8px; margin-top: 10px;">
-                <p style="font-size: 1.1rem; color: #fff; margin-bottom: 8px;">Rak buku Anda masih kosong.</p>
-                <p style="font-size: 0.9rem; color: #888; margin-bottom: 20px;">Belum ada komik yang ditambahkan ke library.</p>
-                <a href="index.php" style="display: inline-block; text-decoration: none; background: #bb86fc; color: #121212; font-weight: bold; padding: 10px 20px; border-radius: 6px; font-size: 0.9rem;">
-                    🏠 Kembali ke Beranda / Cari Komik
-                </a>
-            </div>
         <?php } ?>
     </div>
 
+    <!-- Footer -->
     <?php include 'components/footer.php'; ?>
+
 </body>
 </html>

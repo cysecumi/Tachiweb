@@ -11,8 +11,11 @@ if(!isset($_SESSION['username']) || $_SESSION['username'] != 'admin') {
 // Ambil data komik dari database
 $result_komik = mysqli_query($koneksi, "SELECT * FROM komik ORDER BY id_komik DESC");
 
-// Ambil data pengguna dari database (Kecuali akun admin itu sendiri)
+// Ambil data pengguna dari database (Kecuali akun admin)
 $result_users = mysqli_query($koneksi, "SELECT * FROM users WHERE username != 'admin' ORDER BY id_user DESC");
+
+// Ambil data feedback
+$query_feedback = mysqli_query($koneksi, "SELECT feedback.*, users.username, users.nama_panggilan FROM feedback JOIN users ON feedback.id_user = users.id_user ORDER BY feedback.id_feedback DESC");
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -20,7 +23,9 @@ $result_users = mysqli_query($koneksi, "SELECT * FROM users WHERE username != 'a
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Admin - TachiWeb</title>
+    
     <link rel="stylesheet" href="assets/style.css">
+    
     <style>
         .admin-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-top: 20px; }
         .admin-card { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
@@ -37,6 +42,7 @@ $result_users = mysqli_query($koneksi, "SELECT * FROM users WHERE username != 'a
         .admin-table img { width: 45px; height: 60px; object-fit: cover; border-radius: 4px; }
         .btn-act-edit { background: #03dac6; color: #000; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 0.75rem; }
         .btn-act-del { background: #cf6679; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; cursor: pointer; }
+        .btn-act-reset { background: #ffb74d; color: #000; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; cursor: pointer; }
         @media (max-width: 768px) { .admin-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -58,6 +64,8 @@ $result_users = mysqli_query($koneksi, "SELECT * FROM users WHERE username != 'a
                 elseif($_GET['pesan'] == 'edit_sukses') echo "✅ Data komik berhasil diperbarui!";
                 elseif($_GET['pesan'] == 'hapus_sukses') echo "✅ Komik berhasil dihapus dari database!";
                 elseif($_GET['pesan'] == 'hapus_user_sukses') echo "✅ Akun pembaca berhasil dihapus dari sistem!";
+                elseif($_GET['pesan'] == 'reset_sukses') echo "🔑 Kata sandi pengguna berhasil di-reset menjadi '123456'!";
+                elseif($_GET['pesan'] == 'hapus_feedback_sukses') echo "🗑️ Feedback pengguna berhasil dihapus!";
                 ?>
             </div>
         <?php } ?>
@@ -77,12 +85,7 @@ $result_users = mysqli_query($koneksi, "SELECT * FROM users WHERE username != 'a
                     </div>
                     <div class="form-group">
                         <label>Sumber Aggregator</label>
-                        <select name="sumber">
-                            <option value="Asura">Asura</option>
-                            <option value="KomikCast">KomikCast</option>
-                            <option value="MangaPlus">MangaPlus</option>
-                            <option value="SUKI">SUKI</option>
-                        </select>
+                        <input type="text" name="sumber" required placeholder="Contoh: Asura, Kiryuu, Komikcast">
                     </div>
                     <div class="form-group">
                         <label>Status</label>
@@ -90,6 +93,18 @@ $result_users = mysqli_query($koneksi, "SELECT * FROM users WHERE username != 'a
                             <option value="Ongoing">Ongoing</option>
                             <option value="Completed">Completed</option>
                         </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipe Komik</label>
+                        <select name="tipe">
+                            <option value="Manga">🇯🇵 Manga (Jepang)</option>
+                            <option value="Manhwa">🇰🇷 Manhwa (Korea)</option>
+                            <option value="Manhua">🇨🇳 Manhua (China)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Genre (Pisahkan dengan koma)</label>
+                        <input type="text" name="genre" placeholder="Contoh: Action, Adventure, Fantasy">
                     </div>
                     <div class="form-group">
                         <label>File Cover Gambar (Maks 2MB)</label>
@@ -129,6 +144,8 @@ $result_users = mysqli_query($koneksi, "SELECT * FROM users WHERE username != 'a
                                     <td>
                                         <div style="display: flex; gap: 5px; align-items: center;">
                                             <a href="edit_komik.php?id=<?php echo $row['id_komik']; ?>" class="btn-act-edit">Edit</a>
+                                            <a href="kelola_chapter.php?id=<?php echo $row['id_komik']; ?>" class="btn-act-edit" style="background:#bb86fc;">Chapter</a>
+
                                             <form action="actions/hapus_komik.php" method="POST" onsubmit="return confirm('Hapus komik ini dari database?')">
                                                 <input type="hidden" name="id_komik" value="<?php echo $row['id_komik']; ?>">
                                                 <button type="submit" class="btn-act-del">Hapus</button>
@@ -163,10 +180,17 @@ $result_users = mysqli_query($koneksi, "SELECT * FROM users WHERE username != 'a
                                     <td><strong><?php echo $user['username']; ?></strong></td>
                                     <td><?php echo $user['nama_panggilan']; ?></td>
                                     <td>
-                                        <form action="actions/hapus_user.php" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus akun pembaca ini?')">
-                                            <input type="hidden" name="id_user" value="<?php echo $user['id_user']; ?>">
-                                            <button type="submit" class="btn-act-del">🗑️ Hapus Akun</button>
-                                        </form>
+                                        <div style="display: flex; gap: 5px; align-items: center;">
+                                            <form action="actions/reset_password_user.php" method="POST" onsubmit="return confirm('Reset kata sandi akun ini menjadi 123456?')">
+                                                <input type="hidden" name="id_user" value="<?php echo $user['id_user']; ?>">
+                                                <button type="submit" class="btn-act-reset">🔑 Reset Pass</button>
+                                            </form>
+
+                                            <form action="actions/hapus_user.php" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus akun pembaca ini?')">
+                                                <input type="hidden" name="id_user" value="<?php echo $user['id_user']; ?>">
+                                                <button type="submit" class="btn-act-del">🗑️ Hapus</button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php 
@@ -180,6 +204,41 @@ $result_users = mysqli_query($koneksi, "SELECT * FROM users WHERE username != 'a
                 </div>
             </div>
         </div>
+
+        <!-- ================= FEEDBACK SECTION ================= -->
+        <div class="admin-card" style="margin-top: 20px; border-left: 4px solid #cf6679;">
+            <h4 style="color: #cf6679;">📥 Kotak Masuk Feedback & Laporan Pengguna</h4>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <?php 
+                if($query_feedback && mysqli_num_rows($query_feedback) > 0) {
+                    while($fb = mysqli_fetch_assoc($query_feedback)) { 
+                        $nama_pengirim = !empty($fb['nama_panggilan']) ? $fb['nama_panggilan'] : $fb['username'];
+                ?>
+                    <div style="background: #2c2c2c; padding: 15px; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <div style="font-size: 0.9rem; color: #cf6679; font-weight: bold;">
+                                👤 <?php echo htmlspecialchars($nama_pengirim); ?> 
+                                <span style="color: #888; font-weight: normal; font-size: 0.75rem; margin-left: 5px;">• <?php echo date('d M Y H:i', strtotime($fb['waktu'])); ?></span>
+                            </div>
+                            <form action="actions/hapus_feedback.php" method="POST" onsubmit="return confirm('Hapus feedback ini?')">
+                                <input type="hidden" name="id_feedback" value="<?php echo $fb['id_feedback']; ?>">
+                                <button type="submit" class="btn-act-del" style="padding: 2px 6px; font-size: 0.7rem;">🗑️ Hapus</button>
+                            </form>
+                        </div>
+                        <div style="color: #e0e0e0; font-size: 0.95rem; line-height: 1.5;">
+                            <?php echo nl2br(htmlspecialchars($fb['isi_feedback'])); ?>
+                        </div>
+                    </div>
+                <?php 
+                    } 
+                } else { 
+                    echo "<div style='color: #888; padding: 10px 0;'>Belum ada feedback yang masuk dari pengguna.</div>";
+                } 
+                ?>
+            </div>
+        </div>
+
     </div>
 
     <?php include 'components/footer.php'; ?>
