@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Ambil data sesi secara aman
-$nama_user = isset($_SESSION['nama_panggilan']) ? $_SESSION['nama_panggilan'] : 'Guest';
+$nama_user = isset($_SESSION['nama_panggilan']) ? $_SESSION['nama_panggilan'] : (isset($_SESSION['nama_lengkap']) ? $_SESSION['nama_lengkap'] : 'Guest');
 $inisial   = substr($nama_user, 0, 1);
 $status    = isset($_SESSION['status']) ? $_SESSION['status'] : '';
 $username  = isset($_SESSION['username']) ? $_SESSION['username'] : '';
@@ -29,7 +29,8 @@ $username  = isset($_SESSION['username']) ? $_SESSION['username'] : '';
                     <a href="admin.php" style="color: #bb86fc !important; font-weight: bold;">⚙️ Dashboard Admin</a>
                 <?php } ?>
                 
-                <a href="#">Pengaturan</a>
+                <a href="pengaturan.php">Pengaturan</a>
+                <a href="feedback.php">💬 Feedback</a>
                 <hr>
                 <a href="logout.php" class="dropdown-logout">Keluar</a>
             <?php } else { ?>
